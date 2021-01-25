@@ -1,4 +1,5 @@
 using Glob
+using MPI
 
 using Oceananigans.Utils: initialize_schedule!, align_time_step
 using Oceananigans.Fields: set!
@@ -117,6 +118,8 @@ more than one checkpointer.
 """
 function run!(sim; pickup=false)
 
+    MPI.Init()
+
     model = sim.model
     clock = model.clock
 
@@ -174,6 +177,8 @@ function run!(sim; pickup=false)
         time_after = time()
         sim.run_time += time_after - time_before
     end
+
+    MPI.Finalize()
 
     return nothing
 end

@@ -3,6 +3,7 @@
 #####
 
 using CUDA
+using MPI
 using KernelAbstractions
 using Oceananigans.Architectures
 using Oceananigans.Grids
@@ -22,7 +23,7 @@ to be specified.
 
 For more information, see: https://github.com/CliMA/Oceananigans.jl/pull/308
 """
-function work_layout(grid, dims; include_right_boundaries=false, location=nothing)
+function work_layout(grid, dims; include_right_boundaries=false, location=nothing, use_MPI=false)
 
     Nx, Ny, Nz = size(grid)
 
@@ -45,6 +46,13 @@ function work_layout(grid, dims; include_right_boundaries=false, location=nothin
                     (Int(√MAX_THREADS_PER_BLOCK), Int(√MAX_THREADS_PER_BLOCK))
 
     Nx′, Ny′, Nz′ = include_right_boundaries ? size(location, grid) : (Nx, Ny, Nz)
+
+    if use_MPI
+        # divide the worksize in the z direction by the number of MPI ranks
+        n_MPI_ranks = MPI.Comm_size(MPI.COMM_WORLD)
+        mod(Nz′, n_MPI_ranks) ≠ 0 && throw(ArgumentError("Unsupported MPI configuration: Nz′ = $Nz′ must be divisible by #MPI ranks $n_MPI_ranks"))
+        Nz′ ÷= n_MPI_ranks
+    end
 
     worksize = dims == :xyz ? (Nx′, Ny′, Nz′) :
                dims == :xy  ? (Nx′, Ny′) :
